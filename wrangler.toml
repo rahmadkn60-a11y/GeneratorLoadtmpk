@@ -1,0 +1,7 @@
+name = "auto-uploader"
+
+main = "worker.js"
+
+compatibility_date = "2026-10-04"
+
+workers_dev = true
