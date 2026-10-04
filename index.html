@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Auto Uploader — GitHub Raw Converter</title>
+
+  <meta
+    name="description"
+    content="Upload source code ke GitHub dan generate Raw URL secara otomatis."
+  >
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      color-scheme: dark;
+
+      --bg: #07090d;
+      --panel: rgba(15, 18, 25, 0.82);
+      --panel-2: rgba(20, 24, 33, 0.92);
+      --border: rgba(255, 255, 255, 0.09);
+      --border-hover: rgba(255, 255, 255, 0.16);
+
+      --text: #f5f7fb;
+      --muted: #8e96a6;
+
+      --accent: #7c5cff;
+      --accent-2: #5b8cff;
+
+      --success: #38d996;
+      --danger: #ff5c73;
+
+      --radius: 18px;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+      color: var(--text);
+
+      background:
+        radial-gradient(
+          circle at 20% 0%,
+          rgba(124, 92, 255, 0.18),
+          transparent 32%
+        ),
+        radial-gradient(
+          circle at 90% 10%,
+          rgba(91, 140, 255, 0.14),
+          transparent 28%
+        ),
+        var(--bg);
+
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+
+      pointer-events: none;
+
+      background-image:
+        linear-gradient(
+          rgba(255,255,255,0.025) 1px,
+          transparent 1px
+        ),
+        linear-gradient(
+          90deg,
+          rgba(255,255,255,0.025) 1px,
+          transparent 1px
+        );
+
+      background-size: 40px 40px;
+
+      mask-image: linear-gradient(
+        to bottom,
+        black,
+        transparent 80%
+      );
+    }
+
+    .container {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    header {
+      padding: 28px 0 20px;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+
+      display: grid;
+      place-items: center;
+
+      border-radius: 13px;
+
+      background:
+        linear-gradient(
+          135deg,
+          var(--accent),
+          var(--accent-2)
+        );
+
+      box-shadow:
+        0 10px 35px rgba(124, 92, 255, 0.3);
+
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .brand-text strong {
+      display: block;
+      font-size: 15px;
+      letter-spacing: -0.2px;
+    }
+
+    .brand-text span {
+      display: block;
+      margin-top: 2px;
+
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      padding: 8px 12px;
+
+      border: 1px solid var(--border);
+      border-radius: 999px;
+
+      background: rgba(255,255,255,0.035);
+
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+
+      border-radius: 50%;
+
+      background: var(--success);
+
+      box-shadow:
+        0 0 12px rgba(56, 217, 150, 0.8);
+    }
+
+    main {
+      padding: 50px 0 80px;
+    }
+
+    .hero {
+      max-width: 780px;
+      margin-bottom: 34px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+
+      padding: 7px 11px;
+
+      border: 1px solid rgba(124, 92, 255, 0.25);
+      border-radius: 999px;
+
+      background: rgba(124, 92, 255, 0.08);
+
+      color: #b9abff;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    h1 {
+      margin-top: 18px;
+
+      font-size: clamp(38px, 7vw, 72px);
+      line-height: 0.98;
+      letter-spacing: -4px;
+
+      background:
+        linear-gradient(
+          120deg,
+          #ffffff 20%,
+          #bcb4ff 55%,
+          #80aaff
+        );
+
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .hero p {
+      max-width: 650px;
+
+      margin-top: 20px;
+
+      color: var(--muted);
+
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 1.25fr 0.75fr;
+      gap: 18px;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(255,255,255,0.045),
+          rgba(255,255,255,0.018)
+        ),
+        var(--panel);
+
+      backdrop-filter: blur(20px);
+
+      box-shadow:
+        0 20px 80px rgba(0,0,0,0.28);
+    }
+
+    .editor-card {
+      overflow: hidden;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+
+      padding: 17px 18px;
+
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .card-subtitle {
+      margin-top: 3px;
+
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .language {
+      padding: 6px 9px;
+
+      border: 1px solid var(--border);
+      border-radius: 8px;
+
+      background: rgba(255,255,255,0.035);
+
+      color: #b9c0cd;
+      font-size: 11px;
+      font-family: monospace;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 430px;
+
+      display: block;
+
+      padding: 20px;
+
+      border: 0;
+      outline: 0;
+
+      resize: vertical;
+
+      background: transparent;
+
+      color: #dfe5ef;
+
+      font-family:
+        "SFMono-Regular",
+        Consolas,
+        "Liberation Mono",
+        monospace;
+
+      font-size: 13px;
+      line-height: 1.7;
+
+      tab-size: 2;
+    }
+
+    textarea::placeholder {
+      color: #4f5663;
+    }
+
+    textarea:focus {
+      background: rgba(124, 92, 255, 0.015);
+    }
+
+    .editor-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+
+      padding: 13px 18px;
+
+      border-top: 1px solid var(--border);
+
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .side {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .settings {
+      padding: 20px;
+    }
+
+    .settings h2 {
+      font-size: 14px;
+    }
+
+    .settings > p {
+      margin-top: 6px;
+
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .field {
+      margin-top: 20px;
+    }
+
+    label {
+      display: block;
+
+      margin-bottom: 8px;
+
+      color: #c9cfda;
+
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    input {
+      width: 100%;
+
+      padding: 12px 13px;
+
+      border: 1px solid var(--border);
+      border-radius: 10px;
+
+      outline: none;
+
+      background: rgba(0,0,0,0.18);
+
+      color: var(--text);
+
+      font: inherit;
+      font-size: 12px;
+
+      transition:
+        border-color .2s,
+        background .2s;
+    }
+
+    input:focus {
+      border-color: rgba(124, 92, 255, 0.55);
+      background: rgba(124, 92, 255, 0.04);
+    }
+
+    .convert-btn {
+      width: 100%;
+
+      margin-top: 22px;
+
+      padding: 14px 16px;
+
+      border: 0;
+      border-radius: 11px;
+
+      cursor: pointer;
+
+      background:
+        linear-gradient(
+          135deg,
+          var(--accent),
+          var(--accent-2)
+        );
+
+      color: white;
+
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+
+      box-shadow:
+        0 12px 30px rgba(91, 92, 255, 0.22);
+
+      transition:
+        transform .15s,
+        filter .15s;
+    }
+
+    .convert-btn:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+
+    .convert-btn:active {
+      transform: translateY(0);
+    }
+
+    .output {
+      padding: 20px;
+    }
+
+    .output h2 {
+      font-size: 14px;
+    }
+
+    .result-box {
+      margin-top: 15px;
+      padding: 14px;
+
+      min-height: 100px;
+
+      border: 1px solid var(--border);
+      border-radius: 11px;
+
+      background: rgba(0,0,0,0.2);
+
+      color: #8992a2;
+
+      font-family: monospace;
+      font-size: 11px;
+      line-height: 1.65;
+
+      word-break: break-all;
+    }
+
+    .copy-btn {
+      width: 100%;
+
+      margin-top: 10px;
+
+      padding: 11px;
+
+      border: 1px solid var(--border);
+      border-radius: 10px;
+
+      background: rgba(255,255,255,0.04);
+
+      color: #d8dde7;
+
+      cursor: pointer;
+
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+
+      transition:
+        background .15s,
+        border-color .15s;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255,255,255,0.07);
+      border-color: var(--border-hover);
+    }
+
+    .steps {
+      padding: 20px;
+    }
+
+    .steps h2 {
+      font-size: 14px;
+      margin-bottom: 15px;
+    }
+
+    .step {
+      display: flex;
+      gap: 12px;
+
+      padding: 11px 0;
+
+      border-top: 1px solid rgba(255,255,255,0.055);
+    }
+
+    .step:first-of-type {
+      border-top: 0;
+    }
+
+    .step-number {
+      flex: 0 0 auto;
+
+      width: 24px;
+      height: 24px;
+
+      display: grid;
+      place-items: center;
+
+      border-radius: 8px;
+
+      background: rgba(124,92,255,0.12);
+
+      color: #a99bff;
+
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .step-text strong {
+      display: block;
+
+      color: #dce1ea;
+
+      font-size: 12px;
+    }
+
+    .step-text span {
+      display: block;
+
+      margin-top: 3px;
+
+      color: var(--muted);
+
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    footer {
+      padding: 0 0 30px;
+
+      color: #555d6b;
+
+      text-align: center;
+
+      font-size: 11px;
+    }
+
+    @media (max-width: 850px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        letter-spacing: -2.5px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .container {
+        width: min(100% - 20px, 1180px);
+      }
+
+      header {
+        padding-top: 15px;
+      }
+
+      main {
+        padding-top: 35px;
+      }
+
+      .status {
+        display: none;
+      }
+
+      textarea {
+        min-height: 350px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="container">
+      <nav class="nav">
+
+        <div class="brand">
+          <div class="brand-icon">&lt;/&gt;</div>
+
+          <div class="brand-text">
+            <strong>Auto Uploader</strong>
+            <span>GitHub Raw Converter</span>
+          </div>
+        </div>
+
+        <div class="status">
+          <span class="status-dot"></span>
+          System Ready
+        </div>
+
+      </nav>
+    </div>
+  </header>
+
+
+  <main>
+    <div class="container">
+
+      <section class="hero">
+
+        <div class="eyebrow">
+          GitHub Automation
+        </div>
+
+        <h1>
+          Code to Raw.<br>
+          Instantly.
+        </h1>
+
+        <p>
+          Tempel source code, kirim ke GitHub melalui Cloudflare Worker,
+          lalu generate Raw URL yang siap digunakan.
+        </p>
+
+      </section>
+
+
+      <section class="workspace">
+
+        <!-- EDITOR -->
+
+        <div class="card editor-card">
+
+          <div class="card-header">
+
+            <div>
+              <div class="card-title">
+                Source Code
+              </div>
+
+              <div class="card-subtitle">
+                Paste kode Lua / Luau kamu di bawah
+              </div>
+            </div>
+
+            <div class="language">
+              Lua / Luau
+            </div>
+
+          </div>
+
+
+          <textarea
+            id="codeInput"
+            spellcheck="false"
+            placeholder="-- Paste your Lua / Luau code here...
+
+print(&quot;Hello World&quot;)"
+          ></textarea>
+
+
+          <div class="editor-footer">
+
+            <span id="charCount">
+              0 characters
+            </span>
+
+            <span>
+              Ready
+            </span>
+
+          </div>
+
+        </div>
+
+
+        <!-- SIDEBAR -->
+
+        <div class="side">
+
+          <div class="card settings">
+
+            <h2>
+              Repository Settings
+            </h2>
+
+            <p>
+              Konfigurasi repository tujuan sebelum melakukan upload.
+            </p>
+
+
+            <div class="field">
+
+              <label for="repo">
+                Repository
+              </label>
+
+              <input
+                id="repo"
+                type="text"
+                placeholder="username/repository"
+                autocomplete="off"
+              >
+
+            </div>
+
+
+            <div class="field">
+
+              <label for="filename">
+                File Name
+              </label>
+
+              <input
+                id="filename"
+                type="text"
+                value="script.lua"
+                autocomplete="off"
+              >
+
+            </div>
+
+
+            <button
+              class="convert-btn"
+              id="convertBtn"
+              type="button"
+            >
+              Convert & Upload
+            </button>
+
+          </div>
+
+
+          <div class="card output">
+
+            <h2>
+              Generated Result
+            </h2>
+
+            <div
+              class="result-box"
+              id="result"
+            >
+              Hasil loadstring akan muncul di sini setelah proses upload selesai.
+            </div>
+
+            <button
+              class="copy-btn"
+              id="copyBtn"
+              type="button"
+            >
+              Copy Result
+            </button>
+
+          </div>
+
+
+          <div class="card steps">
+
+            <h2>
+              Workflow
+            </h2>
+
+
+            <div class="step">
+
+              <div class="step-number">
+                01
+              </div>
+
+              <div class="step-text">
+                <strong>Paste Code</strong>
+
+                <span>
+                  Masukkan source code ke editor.
+                </span>
+              </div>
+
+            </div>
+
+
+            <div class="step">
+
+              <div class="step-number">
+                02
+              </div>
+
+              <div class="step-text">
+                <strong>Upload</strong>
+
+                <span>
+                  Cloudflare Worker mengirim file ke GitHub.
+                </span>
+              </div>
+
+            </div>
+
+
+            <div class="step">
+
+              <div class="step-number">
+                03
+              </div>
+
+              <div class="step-text">
+                <strong>Generate Raw</strong>
+
+                <span>
+                  Sistem membuat URL Raw GitHub.
+                </span>
+              </div>
+
+            </div>
+
+
+            <div class="step">
+
+              <div class="step-number">
+                04
+              </div>
+
+              <div class="step-text">
+                <strong>Copy</strong>
+
+                <span>
+                  Hasil dapat langsung disalin ke clipboard.
+                </span>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+
+  <footer>
+    Auto Uploader • Cloudflare Pages + Workers
+  </footer>
+
+
+  <script>
+    const codeInput = document.getElementById("codeInput");
+    const charCount = document.getElementById("charCount");
+
+    const result = document.getElementById("result");
+    const copyBtn = document.getElementById("copyBtn");
+    const convertBtn = document.getElementById("convertBtn");
+
+
+    function updateCharacterCount() {
+      const length = codeInput.value.length;
+
+      charCount.textContent =
+        `${length.toLocaleString()} characters`;
+    }
+
+
+    codeInput.addEventListener(
+      "input",
+      updateCharacterCount
+    );
+
+
+    copyBtn.addEventListener(
+      "click",
+      async () => {
+
+        const text = result.textContent.trim();
+
+        if (!text) {
+          return;
+        }
+
+        try {
+
+          await navigator.clipboard.writeText(text);
+
+          const original =
+            copyBtn.textContent;
+
+          copyBtn.textContent =
+            "Copied!";
+
+          setTimeout(() => {
+            copyBtn.textContent =
+              original;
+          }, 1500);
+
+        } catch (error) {
+
+          console.error(error);
+
+          alert(
+            "Clipboard tidak tersedia di browser ini."
+          );
+
+        }
+
+      }
+    );
+
+
+    convertBtn.addEventListener(
+      "click",
+      async () => {
+
+        const code =
+          codeInput.value.trim();
+
+        const repo =
+          document.getElementById("repo").value.trim();
+
+        const filename =
+          document.getElementById("filename").value.trim();
+
+
+        if (!code) {
+          alert("Masukkan source code terlebih dahulu.");
+          return;
+        }
+
+        if (!repo) {
+          alert("Masukkan repository GitHub.");
+          return;
+        }
+
+        if (!filename) {
+          alert("Masukkan nama file.");
+          return;
+        }
+
+
+        /*
+         * Worker endpoint akan kita buat
+         * pada tahap berikutnya.
+         */
+
+        result.textContent =
+          "Connecting to Cloudflare Worker...";
+
+        convertBtn.disabled = true;
+        convertBtn.textContent =
+          "Processing...";
+
+
+        try {
+
+          /*
+           * Endpoint final:
+           *
+           * POST /api/upload
+           *
+           * Body:
+           * {
+           *   code,
+           *   repo,
+           *   filename
+           * }
+           */
+
+          const response =
+            await fetch("/api/upload", {
+
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body: JSON.stringify({
+                code,
+                repo,
+                filename
+              })
+
+            });
+
+
+          const data =
+            await response.json();
+
+
+          if (!response.ok) {
+            throw new Error(
+              data.error ||
+              "Upload gagal."
+            );
+          }
+
+
+          result.textContent =
+            data.loadstring ||
+            data.rawUrl ||
+            "Tidak ada hasil dari server.";
+
+
+        } catch (error) {
+
+          result.textContent =
+            `Error: ${error.message}`;
+
+        } finally {
+
+          convertBtn.disabled = false;
+
+          convertBtn.textContent =
+            "Convert & Upload";
+
+        }
+
+      }
+    );
+
+
+    updateCharacterCount();
+  </script>
+
+</body>
+</html>
